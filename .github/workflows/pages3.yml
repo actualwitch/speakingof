@@ -11,7 +11,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "pages"
+  group: "pages2"
   cancel-in-progress: false
 
 env:
@@ -32,18 +32,16 @@ jobs:
       - name: Install nightly Rust
         uses: dtolnay/rust-toolchain@nightly
 
+      - name: Add WASM target
+        run: rustup target add wasm32-unknown-unknown
+
       - uses: cargo-bins/cargo-binstall@main
 
       - run:  cargo binstall cargo-leptos -y
 
-      - name: Add WASM target
-        run: rustup target add wasm32-unknown-unknown
-
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v5
-      
-      - run: cargo install cargo-leptos
 
       - run: cargo leptos build --release
 

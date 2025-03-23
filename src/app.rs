@@ -11,7 +11,7 @@ use leptos::{logging::log, prelude::*};
 use leptos_meta::MetaTags;
 use leptos_meta::*;
 use leptos_router::{
-    components::{FlatRoutes, Redirect, Route, Router},
+    components::{FlatRoutes, Route, Router},
     hooks::use_params,
     params::Params,
     path,
