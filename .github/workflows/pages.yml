@@ -32,6 +32,10 @@ jobs:
       - name: Install nightly Rust
         uses: dtolnay/rust-toolchain@nightly
 
+      - uses: cargo-bins/cargo-binstall@main
+
+      - run:  cargo binstall cargo-leptos -y
+
       - name: Add WASM target
         run: rustup target add wasm32-unknown-unknown
 
