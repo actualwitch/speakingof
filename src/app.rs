@@ -32,7 +32,7 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
                 <meta charset="utf-8"/>
                 <meta name="viewport" content="width=device-width, initial-scale=1"/>
                 <AutoReload options=options.clone()/>
-                <HydrationScripts options/>
+                // <HydrationScripts options/>
                 <MetaTags/>
                 <style>
                     {include_str!("style/reset.css")}
