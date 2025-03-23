@@ -1,6 +1,9 @@
+
 #[cfg(feature = "ssr")]
 #[tokio::main]
 async fn main() {
+    use std::env;
+
     use axum::Router;
     use leptos::logging::log;
     use leptos::prelude::*;
@@ -26,13 +29,18 @@ async fn main() {
         .fallback(leptos_axum::file_and_error_handler(shell))
         .with_state(leptos_options);
 
-    // run our app with hyper
-    // `axum::Server` is a re-export of `hyper::Server`
-    log!("listening on http://{}", &addr);
-    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
-    axum::serve(listener, app.into_make_service())
-        .await
-        .unwrap();
+    match env::var("PRERENDER_ONLY") {
+        Ok(_) => {},
+        _ => {
+            // run our app with hyper
+            // `axum::Server` is a re-export of `hyper::Server`
+            log!("listening on http://{}", &addr);
+            let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
+            axum::serve(listener, app.into_make_service())
+                .await
+                .unwrap();
+        }
+    }
 }
 
 #[cfg(not(feature = "ssr"))]

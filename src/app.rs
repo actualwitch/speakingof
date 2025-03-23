@@ -22,7 +22,7 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 use thiserror::Error;
 
-use crate::{constants::{ICON, TITLE, TRIANGLE}};
+use crate::constants::{ICON, TITLE, TRIANGLE};
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
