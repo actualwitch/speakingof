@@ -38,6 +38,9 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
                     {include_str!("style/reset.css")}
                 </style>
                 <style>
+                    {include_str!("style/tods.css")}
+                </style>
+                <style>
                     {include_str!("style/app.css")}
                 </style>
             </head>
@@ -58,7 +61,7 @@ pub fn App() -> impl IntoView {
         <Meta name="color-scheme" content="dark light"/>
         <Link rel="icon" href=format!("data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>{ICON}</text></svg>") />
         <Router>
-            <main>
+            <main class="prose">
                 <FlatRoutes fallback>
                     <Route
                         path=path!("/")
@@ -275,28 +278,38 @@ pub fn parse_markdown(text: String) -> (String, String, Option<String>) {
     let mut description: Option<String> = None;
 
     for node in root.children() {
-        let value = node.data.borrow().value.clone();
-        match value {
+        let mut node_value = node.data.borrow_mut();
+        
+        match &node_value.value {
             NodeValue::FrontMatter(fm) => {
                 description = Some(fm.replace(TRIANGLE, ""));
+                drop(node_value);
                 continue;
             }
-            _ => {
-                if let NodeValue::Heading(NodeHeading { level: 1, .. }) = value {
-                    title = node
-                        .first_child()
-                        .unwrap()
-                        .data
-                        .borrow()
-                        .value
-                        .clone()
-                        .text()
-                        .cloned();
-                    continue;
-                }
-                format_html_with_plugins(node, &options, &mut html, &plugins).unwrap();
+            NodeValue::Heading(NodeHeading { level: 1, .. }) => {
+                drop(node_value);
+                title = node
+                    .first_child()
+                    .unwrap()
+                    .data
+                    .borrow()
+                    .value
+                    .clone()
+                    .text()
+                    .cloned();
+                continue;
+            }
+            _ => {}
+        }
+        
+        if let NodeValue::Heading(heading) = &mut node_value.value {
+            if heading.level != 1 {
+                heading.level = 3;
             }
         }
+        
+        drop(node_value);
+        format_html_with_plugins(node, &options, &mut html, &plugins).unwrap();
     }
 
     (

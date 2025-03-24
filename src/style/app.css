@@ -1,3 +1,11 @@
 body {
-  font-family: Inter, Roboto, 'Helvetica Neue', 'Arial Nova', 'Nimbus Sans', Arial, sans-serif;
+  font-family: Inter, Roboto, "Helvetica Neue", "Arial Nova", "Nimbus Sans",
+    Arial, sans-serif;
+  background: #22161d;
+  color: white;
+}
+
+main {
+  max-width: 80ch;
+  margin: 3ch auto 8ch;
 }
