@@ -3,9 +3,38 @@ body {
     Arial, sans-serif;
   background: #22161d;
   color: white;
+  margin: 0 auto;
+  max-width: 80ch;
 }
 
 main {
-  max-width: 80ch;
-  margin: 3ch auto 8ch;
+  margin: 3ch 3ch 8ch;
+}
+
+a {
+  color: currentColor;
+  text-decoration-thickness: 1px;
+  transition: color 100ms ease-in;
+
+  &:hover {
+    color: hotpink;
+  }
+}
+
+h1 {
+  margin-bottom: 1ch;
+  & a {
+    text-decoration: underline;
+  }
+}
+
+h3, p, ul, ol {
+  margin-bottom: 2ch;
+}
+
+ul.semantic {
+  padding-left: 0;
+  li {
+    list-style: none;
+  }
 }

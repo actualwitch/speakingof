@@ -1,7 +1,7 @@
 use chrono::prelude::*;
 use comrak::{
     format_html_with_plugins,
-    nodes::{NodeHeading, NodeValue},
+    nodes::{AstNode, NodeHeading, NodeLink, NodeValue},
     parse_document,
     plugins::syntect::SyntectAdapterBuilder,
     Arena, ExtensionOptions, Options, Plugins,
@@ -11,7 +11,7 @@ use leptos::{logging::log, prelude::*};
 use leptos_meta::MetaTags;
 use leptos_meta::*;
 use leptos_router::{
-    components::{FlatRoutes, Route, Router},
+    components::{FlatRoutes, Route, Router, A},
     hooks::use_params,
     params::Params,
     path,
@@ -22,7 +22,7 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 use thiserror::Error;
 
-use crate::constants::{ICON, TITLE, TRIANGLE};
+use crate::constants::{ICON, TITLE, TRIANGLE, BASE_URL};
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
@@ -32,7 +32,6 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
                 <meta charset="utf-8"/>
                 <meta name="viewport" content="width=device-width, initial-scale=1"/>
                 <AutoReload options=options.clone()/>
-                // <HydrationScripts options/>
                 <MetaTags/>
                 <style>
                     {include_str!("style/reset.css")}
@@ -94,6 +93,23 @@ pub fn App() -> impl IntoView {
 }
 
 #[component]
+fn NavBar(#[prop(optional)] show_back: Option<bool>) -> impl IntoView {
+    view! {
+        <h1>
+            {show_back.and_then(|show| {
+                if show {
+                    Some(view!{<a href="/">"⏎"</a>" "})
+                } else {
+                    None
+                }
+            })}
+            "Speaking of "
+            <A href="https://www.actualwitch.me">Witch</A>
+        </h1>
+    }
+}
+
+#[component]
 fn HomePage() -> impl IntoView {
     // load the posts
     let posts = Resource::new(|| (), |_| list_posts());
@@ -106,15 +122,13 @@ fn HomePage() -> impl IntoView {
 
     view! {
         <Title text=TITLE />
-        <h1>{TITLE}</h1>
+        <NavBar />
         <Suspense fallback=move || view! { <p>"Loading posts..."</p> }>
-            <ul>
+            <ul class="semantic">
                 <For each=posts key=|post| post.slug.clone() let:post>
                     <li>
                         <a href=format!("/{}/", post.slug)>{post.title.clone()}</a>
                         <p>{post.description}</p>
-                        <p>{post.created_at.to_rfc2822()}</p>
-                        <p>{post.modified_at.to_rfc2822()}</p>
                     </li>
                 </For>
             </ul>
@@ -151,18 +165,16 @@ fn Post() -> impl IntoView {
             match post_resource.await {
                 Ok(Ok(post)) => {
                     Ok(view! {
-                        <nav>
-                            <a href="/">"Index"</a>
-                            <h1>{TITLE}</h1>
-                        </nav>
+                        <NavBar show_back=true />
                         <h2>{post.title.clone()}</h2>
                         <p inner_html=post.content.clone() />
 
-                        // since we're using async rendering for this page,
-                        // this metadata should be included in the actual HTML <head>
-                        // when it's first served
-                        <Title formatter=|text| format!("{text} {TRIANGLE} {TITLE}") text=post.title/>
-                        <Meta name="description" content=post.content/>
+                        // meta + opengraph
+                        <Title formatter=|text| format!("{text} {TRIANGLE} {TITLE}") text=post.title.clone()/>
+                        <Meta name="og:title" content=format!("{} {TRIANGLE} {TITLE}", post.title)/>
+                        <Meta name="og:url" content=format!("{BASE_URL}/{}", post.slug)/>
+                        {post.description.and_then(|desc| Some(view! {<Meta name="og:description" content=desc/>}))}
+                        {post.image.and_then(|image| Some(view! {<Meta name="og:image" content=format!("{BASE_URL}{image}")/>}))}
                     })
                 }
                 Ok(Err(e)) | Err(e) => Err(PostError::ServerError(e.to_string())),
@@ -212,6 +224,7 @@ pub struct Post {
     title: String,
     content: String,
     description: Option<String>,
+    image: Option<String>,
     created_at: DateTime<FixedOffset>,
     modified_at: DateTime<FixedOffset>,
 }
@@ -250,7 +263,7 @@ pub async fn list_slugs() -> Result<Vec<String>, ServerFnError> {
         .await)
 }
 
-pub fn parse_markdown(text: String) -> (String, String, Option<String>) {
+pub fn parse_markdown(text: String) -> (String, String, Option<String>, Option<String>) {
     let arena = Arena::new();
 
     let extension = ExtensionOptions::builder()
@@ -276,13 +289,16 @@ pub fn parse_markdown(text: String) -> (String, String, Option<String>) {
     let mut html = vec![];
     let mut title: Option<String> = None;
     let mut description: Option<String> = None;
+    let mut image: Option<String> = None;
 
     for node in root.children() {
         let mut node_value = node.data.borrow_mut();
         
         match &node_value.value {
             NodeValue::FrontMatter(fm) => {
-                description = Some(fm.replace(TRIANGLE, ""));
+                if description.is_none() {
+                    description = Some(fm.replace(TRIANGLE, ""));
+                }
                 drop(node_value);
                 continue;
             }
@@ -301,22 +317,46 @@ pub fn parse_markdown(text: String) -> (String, String, Option<String>) {
             }
             _ => {}
         }
-        
+
         if let NodeValue::Heading(heading) = &mut node_value.value {
             if heading.level != 1 {
                 heading.level = 3;
             }
         }
-        
+
         drop(node_value);
         format_html_with_plugins(node, &options, &mut html, &plugins).unwrap();
+    }
+
+    if image.is_none() {
+        image = find_first_image(root);
     }
 
     (
         String::from_utf8(html).unwrap(),
         title.unwrap_or_default(),
         description,
+        image,
     )
+}
+
+
+fn find_first_image<'a>(node: &'a AstNode<'a>) -> Option<String> {
+    use comrak::nodes::AstNode;
+    
+    for child in node.children() {
+        let data = child.data.borrow();
+        // If node is an image, return it immediately
+        if let NodeValue::Image(NodeLink { url, .. }) = &data.value {
+            return Some(url.to_string());
+        }
+        drop(data);
+        // Otherwise, keep walking children
+        if let Some(img_url) = find_first_image(child) {
+            return Some(img_url);
+        }
+    }
+    None
 }
 
 #[server]
@@ -357,13 +397,15 @@ pub async fn list_posts() -> Result<Vec<Post>, ServerFnError> {
                 meta.created().expect("should have creation date").into();
             let modified_at: DateTime<Local> =
                 meta.modified().expect("should have modified date").into();
-            let (content, title, description) = parse_markdown(fs::read_to_string(path).await?);
+            let (content, title, description, image) =
+                parse_markdown(fs::read_to_string(path).await?);
 
             Ok(Some(Post {
                 slug,
                 title,
                 content,
                 description,
+                image,
                 created_at: created_at.into(),
                 modified_at: modified_at.into(),
             }))
@@ -381,12 +423,14 @@ pub async fn get_post(slug: String) -> Result<Option<Post>, ServerFnError> {
     let created_at: DateTime<Local> = meta.created().expect("should have creation date").into();
     let modified_at: DateTime<Local> = meta.modified().expect("should have modified date").into();
 
-    let (content, title, description) = parse_markdown(tokio::fs::read_to_string(&path).await?);
+    let (content, title, description, image) =
+        parse_markdown(tokio::fs::read_to_string(&path).await?);
     Ok(Some(Post {
         slug,
         title,
         content,
         description,
+        image,
         created_at: created_at.into(),
         modified_at: modified_at.into(),
     }))

@@ -47,6 +47,8 @@ jobs:
 
       - run: PRERENDER_ONLY=true ./target/release/speakingof
 
+      - run: cp target/site/index.html target/site/404.html
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
