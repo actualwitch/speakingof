@@ -170,8 +170,8 @@ fn Post() -> impl IntoView {
                         <p inner_html=post.content.clone() />
 
                         // meta + opengraph
-                        <Title formatter=|text| format!("{text} {TRIANGLE} {TITLE}") text=post.title.clone()/>
-                        <Meta name="og:title" content=format!("{} {TRIANGLE} {TITLE}", post.title)/>
+                        <Title text=post.title.clone()/>
+                        <Meta name="og:title" content=post.title/>
                         <Meta name="og:url" content=format!("{BASE_URL}/{}", post.slug)/>
                         {post.description.and_then(|desc| Some(view! {<Meta name="og:description" content=desc/>}))}
                         {post.image.and_then(|image| Some(view! {<Meta name="og:image" content=format!("{BASE_URL}{image}")/>}))}
