@@ -1,0 +1,8 @@
+provider = "bunny"
+remote_path = ""
+local_path = "target/site"
+ignore = []
+remote_ignore = []
+
+[bunny]
+storage_zone = "me-actualwitch-speakingof"
