@@ -2,30 +2,29 @@
 name = "speakingof"
 version = "0.1.0"
 authors = ["Adelaide あで Fisher"]
-edition = "2021"
+edition = "2024"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-leptos = { version = "0.8.15", features = ["islands", "nightly"] }
-leptos_router = { version = "0.8.11", features = ["nightly"] }
+leptos = { version = "0.8.20", features = ["islands", "nightly"] }
+leptos_router = { version = "0.8.15", features = ["nightly"] }
 axum = { version = "0.8", optional = true }
 console_error_panic_hook = { version = "0.1", optional = true }
-leptos_axum = { version = "0.8.7", optional = true }
-leptos_meta = { version = "0.8.5" }
+leptos_axum = { version = "0.8.10", optional = true }
+leptos_meta = { version = "0.8.6" }
 tokio = { version = "1", features = ["rt-multi-thread"], optional = true }
-wasm-bindgen = { version = "=0.2.106", optional = true }
-comrak = { version = "0.42.0", features = ["syntect"] }
-chrono = { version = "0.4.42", features = ["serde"] }
-url = { version = "2.5.7", features = ["serde"] }
-thiserror = "2.0.17"
-serde = { version = "1.0.228", features = ["derive"] }
-futures = "0.3.31"
-notify = { version = "8.2.0", optional = true}
-tokio-stream = { version = "0.1.17", features = ["fs"], optional = true }
-http = { version = "1.4.0", optional = true}
-deranged = "=0.4.0"
+wasm-bindgen = { version = "0.2", optional = true }
+comrak = { version = "0.50.0", features = ["syntect"] }
+chrono = { version = "0.4.45", features = ["serde"] }
+url = { version = "2.5.8", features = ["serde"] }
+thiserror = "2.0.20"
+serde = { version = "1.0.229", features = ["derive"] }
+futures = "0.3.34"
+notify = { version = "8.2.0", optional = true }
+tokio-stream = { version = "0.1.19", features = ["fs"], optional = true }
+http = { version = "1.5.0", optional = true }
 
 [features]
 hydrate = ["leptos/hydrate", "dep:console_error_panic_hook", "dep:wasm-bindgen"]

@@ -2,9 +2,10 @@ use chrono::prelude::*;
 use comrak::{
     format_html_with_plugins,
     nodes::{AstNode, NodeHeading, NodeLink, NodeValue},
+    options::{Extension, Plugins},
     parse_document,
     plugins::syntect::SyntectAdapterBuilder,
-    Arena, ExtensionOptions, Options, Plugins,
+    Arena, Options,
 };
 use futures::{channel::mpsc, Stream};
 use leptos::{logging::log, prelude::*};
@@ -22,7 +23,7 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 use thiserror::Error;
 
-use crate::constants::{ICON, TITLE, TRIANGLE, BASE_URL};
+use crate::constants::{BASE_URL, ICON, TITLE, TRIANGLE};
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
@@ -266,7 +267,7 @@ pub async fn list_slugs() -> Result<Vec<String>, ServerFnError> {
 pub fn parse_markdown(text: String) -> (String, String, Option<String>, Option<String>) {
     let arena = Arena::new();
 
-    let extension = ExtensionOptions::builder()
+    let extension = Extension::builder()
         .alerts(true)
         .table(true)
         .underline(true)
@@ -286,14 +287,14 @@ pub fn parse_markdown(text: String) -> (String, String, Option<String>, Option<S
     plugins.render.codefence_syntax_highlighter = Some(&syntect);
 
     let root = parse_document(&arena, &text, &options);
-    let mut html = vec![];
+    let mut html = String::new();
     let mut title: Option<String> = None;
     let mut description: Option<String> = None;
     let mut image: Option<String> = None;
 
     for node in root.children() {
         let mut node_value = node.data.borrow_mut();
-        
+
         match &node_value.value {
             NodeValue::FrontMatter(fm) => {
                 if description.is_none() {
@@ -311,8 +312,7 @@ pub fn parse_markdown(text: String) -> (String, String, Option<String>, Option<S
                     .borrow()
                     .value
                     .clone()
-                    .text()
-                    .cloned();
+                    .text().map(|o| o.to_string());
                 continue;
             }
             _ => {}
@@ -333,22 +333,21 @@ pub fn parse_markdown(text: String) -> (String, String, Option<String>, Option<S
     }
 
     (
-        String::from_utf8(html).unwrap(),
-        title.unwrap_or_default(),
+        html,
+        title.unwrap_or_default().to_string(),
         description,
         image,
     )
 }
 
-
 fn find_first_image<'a>(node: &'a AstNode<'a>) -> Option<String> {
     use comrak::nodes::AstNode;
-    
+
     for child in node.children() {
         let data = child.data.borrow();
         // If node is an image, return it immediately
-        if let NodeValue::Image(NodeLink { url, .. }) = &data.value {
-            return Some(url.to_string());
+        if let NodeValue::Image(val) = &data.value {
+            return Some(val.url.to_string());
         }
         drop(data);
         // Otherwise, keep walking children
@@ -361,8 +360,6 @@ fn find_first_image<'a>(node: &'a AstNode<'a>) -> Option<String> {
 
 #[server]
 pub async fn list_posts() -> Result<Vec<Post>, ServerFnError> {
-    println!("calling list_posts");
-
     use futures::TryStreamExt;
     use tokio::fs;
     use tokio_stream::wrappers::ReadDirStream;
@@ -437,7 +434,7 @@ pub async fn get_post(slug: String) -> Result<Option<Post>, ServerFnError> {
 }
 
 #[allow(unused)] // path is not used in non-SSR
-fn watch_path(path: &Path) -> impl Stream<Item = ()> {
+fn watch_path(path: &Path) -> impl Stream<Item = ()> + use<> {
     #[allow(unused)]
     let (mut tx, rx) = mpsc::channel(0);
 

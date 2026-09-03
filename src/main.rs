@@ -12,29 +12,27 @@ async fn main() {
 
     let conf = get_configuration(None).unwrap();
     let addr = conf.leptos_options.site_addr;
-    let leptos_options = conf.leptos_options;
     // Generate the list of routes in your Leptos App
     let (routes, static_routes) = generate_route_list_with_ssg({
-        let leptos_options = leptos_options.clone();
-        move || shell(leptos_options.clone())
+        let leptos_options = conf.leptos_options.clone();
+        move || shell(leptos_options.to_owned())
     });
 
-    static_routes.generate(&leptos_options).await;
+    static_routes.generate(&conf.leptos_options).await;
+
+    let leptos_options = conf.leptos_options.clone();
 
     let app = Router::new()
         .leptos_routes(&leptos_options, routes, {
-            let leptos_options = leptos_options.clone();
-            move || shell(leptos_options.clone())
+            let copy = leptos_options.clone();
+            move || shell(copy.to_owned())
         })
         .fallback(leptos_axum::file_and_error_handler(shell))
-        .with_state(leptos_options);
+        .with_state(conf.leptos_options);
 
     match env::var("PRERENDER_ONLY") {
         Ok(_) => {},
         _ => {
-            // run our app with hyper
-            // `axum::Server` is a re-export of `hyper::Server`
-            log!("listening on http://{}", &addr);
             let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
             axum::serve(listener, app.into_make_service())
                 .await
